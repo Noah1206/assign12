@@ -1,4 +1,17 @@
-**STEP 2. Source Code Exploration & Analysis**
+Project Information: 프로젝트 소개, GitHub URL, Render URL
+
+프로젝트 소개 : book crud api 프로그램
+GitHub URL : 
+
+
+Installation: Java/DB 환경과 실행 방법
+Source Code Exploration: 분석 질문 8개 답변, 주석 작성한 메서드 3개
+Refactoring: DTO와 ResponseEntity 변경 전/후
+New Features: Validation, 공통 예외 처리, Pagination/Sorting, Swagger
+Testing & Deployment: results/ 스크린샷 6장 이상 및 배포 URL
+Weekly Review: 새롭게 배운 내용 3가지, 어려웠던 점과 해결 방법, AI 활용 내용 및 느낀 점
+
+
 
 **① Source Code Analysis — 질문 8개**README에 자신의 말로 각 2~4문장 작성하고 관련 **소스 파일과 메서드명**을 명시합니다.
 
