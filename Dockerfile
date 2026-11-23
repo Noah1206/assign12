@@ -2,11 +2,11 @@
 FROM eclipse-temurin:17-jdk AS build
 WORKDIR /app
 
-COPY ../demo1/gradlew settings.gradle build.gradle ./
-COPY ../demo1/gradle ./gradle
+COPY gradlew settings.gradle build.gradle ./
+COPY gradle ./gradle
 RUN chmod +x gradlew
 
-COPY ../demo1/src ./src
+COPY src ./src
 
 RUN ./gradlew clean bootJar --no-daemon
 
