@@ -34,6 +34,58 @@ Pageable은 page,size,sort 요청을 받는 객체, Page<T>는 데이터와 페�
 2. BookService.findById() — Repository 조회, Optional, 404 예외 발생
 3. BookController.list() 또는 BookService.findAll() — Pageable, Page, DTO 변환
 
+**1. BookController.create()**
+```java
+// POST /api/books 요청을 처리한다
+@PostMapping
+// @RequestBody로 JSON을 BookRequest DTO로 변환하고, @Valid로 제약조건(@NotBlank 등)을 검사해 실패하면 400을 반환한다
+public ResponseEntity<BookResponse> create(@Valid @RequestBody BookRequest request) {
+    // 검증을 통과한 DTO를 서비스에 넘겨 엔티티로 변환·저장하고, DB가 생성한 id가 채워진 엔티티를 받는다
+    Book saved = service.create(request);
+    // 엔티티를 외부에 노출하지 않도록 응답용 DTO로 변환한다
+    BookResponse body = BookResponse.from(saved);
+    // ResponseEntity.created()로 상태코드 201 Created와 새 리소스 위치를 알려주는 Location 헤더를 함께 설정한다
+    return ResponseEntity.created(URI.create("/api/books/" + saved.getId()))
+            // 응답 본문에 생성된 도서 DTO를 담아 반환한다
+            .body(body);
+}
+```
+
+**2. BookService.findById()**
+```java
+// 읽기 전용 트랜잭션 안에서 단건을 조회한다
+@Transactional(readOnly = true)
+// id로 엔티티를 찾아 반환하고, 없으면 404 예외를 던진다
+public Book findById(Long id) {
+    // JpaRepository.findById()는 null 대신 결과가 없을 수도 있음을 나타내는 Optional<Book>을 반환한다
+    return repository.findById(id)
+        // Optional이 비어 있으면 BookNotFoundException을 던지고, GlobalExceptionHandler가 이를 404 응답으로 바꾼다
+        .orElseThrow(() -> new BookNotFoundException(id));
+}
+```
+
+**3. BookController.list() / BookService.findAll()**
+```java
+// GET /api/books?page=0&size=10&sort=title,asc 요청을 처리한다
+@GetMapping
+// 쿼리 파라미터가 없을 때 기본값(10개씩, id 오름차순)으로 Pageable을 만들어 주입받는다
+public Page<BookResponse> list(@PageableDefault(size = 10, sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
+    // 서비스가 반환한 Page<BookResponse>를 그대로 응답하면 content와 page(size·number·totalElements·totalPages)가 JSON으로 직렬화된다
+    return service.findAll(pageable);
+}
+```
+```java
+// 읽기 전용 트랜잭션: 변경 감지(dirty checking)를 생략해 조회 성능을 높인다
+@Transactional(readOnly = true)
+// Pageable(page·size·sort)을 받아 해당 페이지의 DTO 목록과 페이지 메타정보를 담은 Page를 반환한다
+public Page<BookResponse> findAll(Pageable pageable) {
+    // repository.findAll(pageable)이 LIMIT/OFFSET·ORDER BY 쿼리와 전체 개수 COUNT 쿼리를 실행해 Page<Book>을 만든다
+    return repository.findAll(pageable)
+        // Page.map()으로 각 Book 엔티티를 BookResponse DTO로 변환한다 (totalElements 등 메타정보는 그대로 유지)
+        .map(BookResponse::from);
+}
+```
+
 - 주요 실행 코드의 **목적과 데이터 흐름**을 설명합니다. import, 중괄호 등 단순 문법은 제외 가능합니다.
 - 기존 CRUD는 정상 동작해야 합니다.
 - **README 분석 답변 및 Java 코드 설명 주석에는 생성형 AI를 사용하지 않습니다.**
@@ -51,4 +103,15 @@ Pageable은 page,size,sort 요청을 받는 객체, Page<T>는 데이터와 페�
 | PUT /api/books/{id} | 200, Book 엔티티 반환 | 200, BookResponse 반환 
 | DELETE /api/books/{id} | 200 | 204 No Content 
 
+Swagger
+- UI: http://localhost:8080/swagger-ui.html
+- OpenAPI JSON: http://localhost:8080/v3/api-docs
+- BookController에 `@Tag`, 각 API에 `@Operation`으로 설명을 달았다.
 
+| 위치 | 어노테이션 | 내용
+| BookController (클래스) | `@Tag` | name = "Book", description = "도서 CRUD API" 
+| GET /api/books | `@Operation` | 도서 목록 조회 — page, size, sort 파라미터로 페이징/정렬 
+| GET /api/books/{id} | `@Operation` | 도서 단건 조회 — 없는 id면 404 
+| POST /api/books | `@Operation` | 도서 등록 — 성공 시 201과 Location 헤더 반환 
+| PUT /api/books/{id} | `@Operation` | 도서 수정 
+| DELETE /api/books/{id} | `@Operation` | 도서 삭제 — 성공 시 204 
